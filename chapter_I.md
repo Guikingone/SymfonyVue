@@ -111,12 +111,14 @@ Once this is done, let's update our index.html.twig file :
 Here, the first things is to use the verbatim tag via Twig, this way, our JS code is managed by Vue and the syntax
 can't be managed by Twig (with the holy magic error 'message' variable can't be found), Vue use the same syntax as Twig (without some shortcut),
 this way, we can define our logic and use it faster and smoother.
+
 Second things, we instantiate the Vue object, this way, we can manage our whole page, to do this, we add a id with the value "app"
 inside the html body, this way, the body bloc defined by Twig is completely managed by Vue and we can access to the "bloc"
 by using the el key, we target the id and voila.
-Once this is done, we define what variables we gonna show inside our bloc, here, it's a simple string bu later, you gonna
-learn to manager routes and event forms !
-If you do everything correctly, your application (launched by ./bin/console s:r) should show a Hello World ! right in the left of your screen.
+
+Once this is done, we define what variables we gonna show inside our bloc, here, it's a simple string but later, you gonna
+learn to manager routes and even forms !
+If you do everything correctly, your application (launched by ./bin/console s:r) should show a 'Hello World !' right in the left of your screen.
 
 Alright, so, we just add Vue into our Symfony apps and we can see that you have a thousand questions, let's be clear, we gonna answer all of yours.
 First, let's build a context for our apps, in this course, we gonna build a online e-commerce, nothing to difficult, just a simple market process.
