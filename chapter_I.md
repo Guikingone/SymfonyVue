@@ -126,3 +126,283 @@ First, let's build a context for our apps, in this course, we gonna build a onli
 ## Part II - Building our logic
 
 Ok, now that we have our logic and even our goals, let's build something solid.
+
+Long story short, let's add something to render to the client, in a e-commerce shop, we have multiples 'products', in this
+vision, we gonna build a Product entity and the manager who manage this entity :
+
+```php
+<?php
+
+/*
+ * This file is part of the SymfonyVue project.
+ *
+ * (c) Guillaume Loulier <contact@guillaumeloulier.fr>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace AppBundle\Entity;
+
+use Doctrine\ORM\Mapping as ORM;
+
+/**
+ * Class Products
+ *
+ * @author Guillaume Loulier <contact@guillaumeloulier.fr>
+ *
+ * @ORM\Entity
+ * @ORM\Table(name="products")
+ */
+class Products
+{
+    /**
+     * @var int
+     *
+     * @ORM\Id
+     * @ORM\Column(name="id")
+     * @ORM\GeneratedValue(strategy="AUTO")
+     */
+    private $id;
+
+    /**
+     * @var string
+     *
+     * @ORM\Column(name="name", type="string", length=200, nullable=false)
+     */
+    private $name;
+
+    /**
+     * @var string
+     *
+     * @ORM\Column(name="price", type="string", length=50, nullable=false)
+     */
+    private $price;
+
+    /**
+     * @return int
+     */
+    public function getId () : int
+    {
+        return $this->id;
+    }
+
+    /**
+     * @return string
+     */
+    public function getName () : string
+    {
+        return $this->name;
+    }
+
+    /**
+     * @param $name
+     *
+     * @return $this
+     */
+    public function setName ($name)
+    {
+        $this->name = $name;
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getPrice () : string
+    {
+        return $this->price;
+    }
+
+    /**
+     * @param $price
+     *
+     * @return $this
+     */
+    public function setPrice ($price)
+    {
+        $this->price = $price;
+
+        return $this;
+    }
+}
+```
+
+Simple entity, just for the "gestion" purpose, this way, here's the manager :
+
+```php
+<?php
+
+/*
+ * This file is part of the SymfonyVue project.
+ *
+ * (c) Guillaume Loulier <contact@guillaumeloulier.fr>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace AppBundle\Managers;
+
+use AppBundle\Entity\Products;
+use Doctrine\ORM\EntityManager;
+
+/**
+ * Class ProductsManager
+ *
+ * @author Guillaume Loulier <contact@guillaumeloulier.fr>
+ */
+class ProductsManager
+{
+    /** @var EntityManager */
+    private $doctrine;
+
+    /**
+     * ProductsManager constructor.
+     *
+     * @param EntityManager $doctrine
+     */
+    public function __construct (EntityManager $doctrine)
+    {
+        $this->doctrine = $doctrine;
+    }
+
+    /**
+     * @return array
+     */
+    public function getAllProducts()
+    {
+        return $this->doctrine->getRepository(Products::class)->findAll();
+    }
+}
+```
+
+Here, nothing to hard, we just return all the products stored into the BDD (for the moment).
+
+Alright, let's update our Controllers :
+
+```php
+<?php
+
+/*
+ * This file is part of the SymfonyVue project.
+ *
+ * (c) Guillaume Loulier <contact@guillaumeloulier.fr>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace AppBundle\Controller;
+
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
+use Symfony\Bundle\FrameworkBundle\Controller\Controller;
+
+class ProductsController extends Controller
+{
+    /**
+     * @Route(path="/products", name="products_all")
+     */
+    public function getAllProductsAction()
+    {
+        $products = $this->get('core.products_manager')->getAllProducts();
+
+        return $this->render('Logic/products.html.twig', [
+            'products' => $products
+        ]);
+    }
+}
+```
+
+The core.products_manager is declared inside the services.yml :
+
+```yaml
+# Learn more about services, parameters and containers at
+# http://symfony.com/doc/current/service_container.html
+parameters:
+    #parameter_name: value
+
+services:
+    core.products_manager:
+        class: AppBundle\Managers\ProductsManager
+        arguments:
+            - '@doctrine.orm.entity_manager'
+```
+
+For the moment, not a single products has been persisted into the BDD but we already have our logic, nice things.
+For the moment, we have a routes who return all the products, good ide but how can we access her from Vue ?
+Well, if you use Twig, you probably use something like this :
+
+```twig
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    {% verbatim %}
+      <h1>{{ message }}</h1>
+    {% endverbatim %}
+    <a href="{{ path('products_all') }}">Products !</a>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        var app = new Vue({
+            el: "#app",
+            data: {
+                message: 'Hello World !',
+                link: 'products'
+            }
+        })
+    </script>
+{% endblock %}
+```
+
+Don't get me wrong, that's a good way for approaching routing but Vue can be used in order to do the same things but
+faster and cleaner, in fact, Vue has his own router, we gonna use it later but for the moment, let's see how to create a
+link with Vue from the index to the /products route.
+
+To do so, let's update our index.html.twig file :
+
+```twig
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    {% verbatim %}
+      <h1>{{ message }}</h1>
+      <p>
+        <a v-bind:href="link">Products !</a>
+      </p>
+    {% endverbatim %}
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        var app = new Vue({
+            el: "#app",
+            data: {
+                message: 'Hello World !',
+                link: 'products'
+            }
+        })
+    </script>
+{% endblock %}
+```
+
+Alright, so, where's the differences here ?
+
+First, we define a new attribute in the Vue instance, we simply call the after slash part of our route, if we need
+to have a slash after, Vue can handle it. Once this is done, time to "bind" the value into our view, to do this, Vue
+allow to use a new "html attribute" called v-bind, this attribute allow to show in the raw aspect a attribute and if it's
+a URL attribute, to passe it into the URL, amazing little thing.
+In this case, we bind into the href part of the a tag, we simply passe the attribute and Vue gonna do the trick to pass
+the attribute to the URL, once this is done, Symfony gonna grab the request and match with the controller created earlier,
+yeah, we know, magic thing, amazing approach, we know, we love this type of logic !
+
+If everything go's right, you should see a black page with no error, logic approach, we don't have any products at this time.
+
+Alright, time to build something bigger, we know how to show something, we know how to merge the Sf router and the Vue instance,
+let's build the next part of our application.
+
+## Part III - You say logic ?
