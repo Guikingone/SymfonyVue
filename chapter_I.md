@@ -331,7 +331,7 @@ services:
 ```
 
 For the moment, not a single products has been persisted into the BDD but we already have our logic, nice things.
-For the moment, we have a routes who return all the products, good ide but how can we access her from Vue ?
+For the moment, we have a routes who return all the products, good idea but how can we access her from Vue ?
 Well, if you use Twig, you probably use something like this :
 
 ```twig
@@ -400,9 +400,433 @@ In this case, we bind into the href part of the a tag, we simply passe the attri
 the attribute to the URL, once this is done, Symfony gonna grab the request and match with the controller created earlier,
 yeah, we know, magic thing, amazing approach, we know, we love this type of logic !
 
-If everything go's right, you should see a black page with no error, logic approach, we don't have any products at this time.
+If everything goes right, you should see a blank page with no error, logic approach, we don't have any products at this time.
 
 Alright, time to build something bigger, we know how to show something, we know how to merge the Sf router and the Vue instance,
 let's build the next part of our application.
 
 ## Part III - You say logic ?
+
+Alright random citizen, time to get serious, now that we have some logic, time to build something bigger.
+In this part, we gonna discover something bigger, for the moment, we have a backend and some frontend logic, time
+to connect the two and build something really smarter.
+
+For the moment, Vue only handle basic usage, we've connect the "router" aspect but later, we gonna pass through this one,
+so, what's the deal here ?
+
+The biggest problem is that we use Vue as a "magical" tools in order to show something, not really what Vue is designed for,
+in fact, Vue is build in order to manage the user experience and build a complete Single Page Application, this way,
+our backend only return "Json content" and Vue provide the view aspect and the user management part of the application.
+
+This way, if we go deeper, we need to have some "real" logic that Vue can handle.
+
+Alright, so, what can be build using Vue ?
+
+In our application, we can imagine a research form who can handle the user demand and show the result found on the BDD
+into a list or better, show a list of result and allow the user to click on the results and go to the details page.
+Yeah, that's what we want, time to build it !
+
+First, let's create a SearchForm and a method inside our Manager to handle this form :
+
+```php
+<?php
+
+/*
+ * This file is part of the SymfonyVue project.
+ *
+ * (c) Guillaume Loulier <contact@guillaumeloulier.fr>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace AppBundle\Form\Type;
+
+use AppBundle\Entity\Products;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
+
+class SearchProductsType extends AbstractType
+{
+    public function buildForm (FormBuilderInterface $builder, array $options)
+    {
+        $builder
+            ->add('name', TextType::class)
+        ;
+    }
+
+    public function configureOptions (OptionsResolver $resolver)
+    {
+        $resolver->setDefaults([
+            'data_class' => Products::class
+        ]);
+    }
+
+}
+```
+
+Now, let's update our manager :
+
+```php
+<?php
+
+/*
+ * This file is part of the SymfonyVue project.
+ *
+ * (c) Guillaume Loulier <contact@guillaumeloulier.fr>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace AppBundle\Managers;
+
+use AppBundle\Entity\Products;
+use AppBundle\Form\Type\SearchProductsType;
+use Doctrine\ORM\EntityManager;
+use Symfony\Component\Form\FormFactory;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\OptionsResolver\Exception\InvalidOptionsException;
+
+/**
+ * Class ProductsManager
+ *
+ * @author Guillaume Loulier <contact@guillaumeloulier.fr>
+ */
+class ProductsManager
+{
+    /** @var EntityManager */
+    private $doctrine;
+
+    /** @var FormFactory */
+    private $form;
+
+    /** @var RequestStack */
+    private $request;
+
+    /**
+     * ProductsManager constructor.
+     *
+     * @param EntityManager $doctrine
+     * @param FormFactory   $form
+     * @param RequestStack  $request
+     */
+    public function __construct (
+        EntityManager $doctrine,
+        FormFactory $form,
+        RequestStack $request
+    ) {
+        $this->doctrine = $doctrine;
+        $this->form = $form;
+        $this->request = $request;
+    }
+
+    /**
+     * @return array
+     */
+    public function getAllProducts()
+    {
+        return $this->doctrine->getRepository(Products::class)->findAll();
+    }
+
+    /**
+     * @throws InvalidOptionsException
+     *
+     * @return \Symfony\Component\Form\FormView
+     */
+    public function searchProductsByName()
+    {
+        $request = $this->request->getCurrentRequest();
+        $form = $this->form->create(SearchProductsType::class);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            // TODO
+        }
+
+        return $form->createView();
+    }
+}
+```
+
+Ok, let's update our controllers then :
+
+```php
+<?php
+
+/*
+ * This file is part of the SymfonyVue project.
+ *
+ * (c) Guillaume Loulier <contact@guillaumeloulier.fr>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace AppBundle\Controller;
+
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\Route;
+use Symfony\Bundle\FrameworkBundle\Controller\Controller;
+
+/**
+ * Class ProductsController
+ *
+ * @author Guillaume Loulier <contact@guillaumeloulier.fr>
+ */
+class ProductsController extends Controller
+{
+    /**
+     * @Route(path="/products", name="products_all")
+     */
+    public function getAllProductsAction()
+    {
+        $products = $this->get('core.products_manager')->getAllProducts();
+
+        $form = $this->get('core.products_manager')->searchProductsByName();
+
+        return $this->render('Logic/products.html.twig', [
+            'products' => $products,
+            'searchForm' => $form
+        ]);
+    }
+}
+```
+
+Alright, time to get serious, you're about to discover something completely new in web development, we named it
+'mind changer components approach' but well, way to long to say, call it components.
+You need to understand basic logic to understand component, in the past, when you build a HTML page, you create new tag
+and "cut" your page in multiples sections or article and event div, bad idea.
+
+Today, you cut your page on multiples component, each components contains his own logic and is "outside" of the other component,
+this approach is the heart of React and Angular, in Vue, it's also the heart but the approach is much simple, in fact,
+you can build the whole application without using component, if you use components, Vue's gonna be a completely different
+framework and your code gonna change fast and for the best !
+
+Ok, enough talk, how can we build component in our view ? Simply by extending the Vue instance :
+
+```twig
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    {% for products in products %}
+        <p>{{ products.name }}</p>
+    {% endfor %}
+    <products-component></products-component>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        Vue.component('products-component', {
+            template: '<div>Hello World from products !</div>'
+        });
+        var app = new Vue({
+            el: '#app',
+            data: {
+
+            },
+        })
+    </script>
+{% endblock %}
+```
+
+Here's your first component using Vue !
+
+if everything goes right, you must see 'Hello World from products !' in your browser, petty cool huh ?
+In fact, Vue is based on Polymer approach, by the way that you can build your own html tag and 'component' as long
+as he contains logic and can be called in your view, pretty simple.
+
+Ok, now, time to update our view in order to show the form :
+
+```twig
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    {% for products in products %}
+        <p>{{ products.name }}</p>
+    {% endfor %}
+    {{ form_start(searchForm) }}
+    {{ form_label(searchForm.name) }}
+        {{ form_widget(searchForm.name) }}
+        {{ form_errors(searchForm.name) }}
+    {{ form_end(searchForm) }}
+    <products-component></products-component>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        Vue.component('products-component', {
+            template: '<div>Hello World from products !</div>'
+        });
+        var app = new Vue({
+            el: '#app',
+            data: {
+
+            },
+        })
+    </script>
+{% endblock %}
+```
+
+Alright, simple things here, we simply show how to display the form, now, time to get serious, how can we use Vue inside
+of our form ?
+
+Hum, not so easy if you think about it ... In fact, it's very simple, we learn earlier how to bind a attribute to the URL,
+magic happen, Vue is also capable of binding attributes FROM something, like a form for example, let's update our view :
+
+```twig
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    {% for products in products %}
+        <p>{{ products.name }}</p>
+    {% endfor %}
+    {{ form_start(searchForm) }}
+    {{ form_label(searchForm.name) }}
+        {{ form_widget(searchForm.name, {'attr': {'v-model': 'name'}}) }}
+        {{ form_errors(searchForm.name) }}
+    {{ form_end(searchForm) }}
+    {% verbatim %}
+        <p>
+            How, seems like you're searching {{ name }},
+            here's the list of products wih this category that we have in stock :
+        </p>
+    {% endverbatim %}
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        Vue.component('products-component', {
+            template: '<div>How, seems like you\'re searching </div>'
+        });
+        var app = new Vue({
+            el: '#app',
+            data: {
+                name: ''
+            },
+        })
+    </script>
+{% endblock %}
+```
+
+Here's the big advantages, here, we delete the component for readability but don't be scare, he's on the return,
+for the logic, we simply put the v-model attribute on our form, this way, Vue can bind this attribute from our form to
+our Vue instance and store the result, once this is done, we show the result in our view via {{ name }}, just give a try,
+if you type 'illumination !' inside the form, Vue's gonna show the result in the p tag, we can even go further with
+a conditioning rendering :
+
+```twig
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    {% for products in products %}
+        <p>{{ products.name }}</p>
+    {% endfor %}
+    {{ form_start(searchForm) }}
+    {{ form_label(searchForm.name) }}
+        {{ form_widget(searchForm.name, {'attr': {'v-model': 'name'}}) }}
+        {{ form_errors(searchForm.name) }}
+    {{ form_end(searchForm) }}
+    {% verbatim %}
+        <p v-if="name">
+            How, seems like you're searching {{ name }},
+            here's the list of products wih this category that we have in stock :
+        </p>
+    {% endverbatim %}
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        Vue.component('products-component', {
+            template: '<div>Hello World from products !</div>'
+        });
+        var app = new Vue({
+            el: '#app',
+            data: {
+                name: ''
+            },
+        })
+    </script>
+{% endblock %}
+```
+
+Here, we simply add the v-if attribute on the p with the condition on "if name exist then the p tag gonna be updated"
+with the content of the form and displayed to the visitor.
+
+Yeah, we know, seems magic ? It is ! This way, if the form stay blank, the visitor don't have the p and he can continue
+to explore the page, if he enter something, the p is updated and we show the result, later, we gonna ask the server for
+the results and show this result to the client but for the moment, give a try by handling multiples form
+and binding the attributes in your view.
+
+Ok, one more things, here, we sam how to bind the value passed from the input field into our Vue instance
+and how to return this attributes into our view but how can we 'inject' Vue into the Submit process of Symfony and grab
+ the data, this way, we can stop the process of the form and simply launch the research phase from Vue ?
+
+Well, for this, Vue allow to use the 'v-on' directives, this approach allow to call Vue on certain phase or events
+and do things related to this event. In this way, we can call the submit phase of the form and do something else than
+process the submission via Symfony :
+
+```twig
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    {% for products in products %}
+        <p>{{ products.name }}</p>
+    {% endfor %}
+    {{ form_start(searchForm, {'attr': {'v-on:submit.prevent': 'searchProducts'}}) }}
+    {{ form_label(searchForm.name) }}
+        {{ form_widget(searchForm.name, {'attr': {'v-model': 'name'}}) }}
+        {{ form_errors(searchForm.name) }}
+    <button type="submit">Rechercher</button>
+    {{ form_end(searchForm) }}
+    {% verbatim %}
+        <p v-if="name">
+            How, seems like you're searching {{ name }},
+            here's the list of products wih this category that we have in stock :
+        </p>
+    {% endverbatim %}
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        Vue.component('products-component', {
+            template: '<div>Hello World from products !</div>'
+        });
+        var app = new Vue({
+            el: '#app',
+            data: {
+                name: ''
+            },
+            methods: {
+                searchProducts: function() {
+                    console.log('Hey, you\'re searching ' +  this.name);
+                }
+            }
+        })
+    </script>
+{% endblock %}
+```
+
+Here, we've add the v-on:submit.prevent directive on the form_start call and bind this directive to a method called
+searchProducts, this way, Vue's gonna do the relation and call the method once the form is submitted, we gonna stop the
+the submit process and log to the console the message, if everything goes smoothly, your console should show
+the message.
+
+Hell yeah ! We know, Vue is awesome, fast and simple to understand, his approach to a lot of things is pretty straight forward
+but let's be clear, you don't see the whole package that Vue offer, here, we simply inject Vue inside our view and call
+different method or shortcut in order to do simple things, that's not the complete way of using Vue.
+
+Alright crazy readers, here's just the beginning of your adventure with Vue and Symfony, it's over for this chapter but
+we gonna build something way more bigger in the second chapter, stay in contact !
+
+Guillaume, brownie addict.
+
+
+
+
