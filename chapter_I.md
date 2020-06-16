@@ -23,7 +23,7 @@ That's say, Vue is a lightweight framework and like other JS framework, his goal
 the frontend part of your application and improve the 'reactivity' of this part, talking about reactivity,
 a Symfony app is already capable of managing some part of the frontend experience but Vue allow us to go
 further and deeper into the user experience.
-For more informations, we let you read the official documentation of Vue, this course is not intended to teach you all
+For more information, we let you read the official documentation of Vue, this course is not intended to teach you all
 the parts of this huge framework.
 
 Ok, time to build something !
